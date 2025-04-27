@@ -1,203 +1,104 @@
-// src/pages/Dashboard.jsx
-import React, { useState, useEffect } from "react";
+// src/pages/Homepage.jsx
+import React from "react";
 import {
+  Box,
   Container,
   Typography,
-  Box,
-  TextField,
   Button,
   Grid,
   Card,
   CardContent,
-  Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from "@mui/material";
-import { useSnackbar } from "notistack";
-import axios from "../services/api";
+import { Link } from "react-router-dom";
+import HeroImage from "../assets/hero.jpg";
 
-// Hard-coded material options
-const MATERIAL_OPTIONS = [
-  "Plastic",
-  "Paper",
-  "Glass",
-  "Metal",
-  "Electronics",
-  "Other",
+const features = [
+  {
+    title: "Easy Scheduling",
+    description: "Book pickups in seconds with our intuitive form.",
+  },
+  {
+    title: "Reliable Vendors",
+    description: "Trusted local recyclers handle your waste.",
+  },
+  {
+    title: "Real-time Tracking",
+    description: "Monitor your pickup status instantly.",
+  },
 ];
 
-const Dashboard = () => {
-  const { enqueueSnackbar } = useSnackbar();
-  const [pickups, setPickups] = useState([]);
-  const [form, setForm] = useState({
-    materialType: "",
-    pickupDate: "",
-    pickupTime: "",
-    address: "",
-  });
-
-  // Fetch existing pickups
-  const loadPickups = async () => {
-    try {
-      const res = await axios.get("/my-pickups");
-      setPickups(res.data);
-    } catch {
-      enqueueSnackbar("Failed to load pickups", { variant: "error" });
-    }
-  };
-
-  useEffect(() => {
-    loadPickups();
-  }, []);
-
-  // Handle form field changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-  };
-
-  // Use browser geolocation + reverse-geocode via OSM Nominatim
-  const handleUseLocation = () => {
-    if (!navigator.geolocation) {
-      enqueueSnackbar("Geolocation not supported", { variant: "warning" });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const { latitude, longitude } = pos.coords;
-      try {
-        const resp = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
-        );
-        const data = await resp.json();
-        const addr = data.display_name || `${latitude}, ${longitude}`;
-        setForm((f) => ({ ...f, address: addr }));
-      } catch {
-        enqueueSnackbar("Failed to fetch address", { variant: "error" });
-        setForm((f) => ({ ...f, address: `${latitude}, ${longitude}` }));
-      }
-    });
-  };
-
-  // Submit new pickup
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post("/schedule-pickup", form);
-      enqueueSnackbar("Pickup scheduled", { variant: "success" });
-      setForm({
-        materialType: "",
-        pickupDate: "",
-        pickupTime: "",
-        address: "",
-      });
-      loadPickups();
-    } catch (err) {
-      enqueueSnackbar(err.response?.data?.message || "Schedule failed", {
-        variant: "error",
-      });
-    }
-  };
-
-  return (
-    <Container sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Schedule New Pickup
-      </Typography>
-
-      <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          {/* Material Type Select */}
-          <FormControl fullWidth required sx={{ minWidth: 180 }}>
-            <InputLabel id="material-select-label">Material Type</InputLabel>
-            <Select
-              labelId="material-select-label"
-              name="materialType"
-              value={form.materialType}
-              label="Material Type"
-              onChange={handleChange}
-            >
-              {MATERIAL_OPTIONS.map((mat) => (
-                <MenuItem key={mat} value={mat}>
-                  {mat}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Date Picker */}
-          <TextField
-            name="pickupDate"
-            label="Date"
-            type="date"
-            value={form.pickupDate}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            required
-          />
-
-          {/* Time Picker */}
-          <TextField
-            name="pickupTime"
-            label="Time"
-            type="time"
-            value={form.pickupTime}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            required
-          />
-        </Stack>
-
-        {/* Address Field */}
-        <TextField
-          name="address"
-          label="Address"
-          value={form.address}
-          onChange={handleChange}
-          fullWidth
+const Homepage = () => (
+  <>
+    <Box
+      sx={{
+        position: "relative",
+        height: { xs: "40vh", md: "60vh" },
+        backgroundImage: `url(${HeroImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        // blend a dark overlay
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          bgcolor: "rgba(0, 0, 0, 0.4)",
+          top: 0,
+          left: 0,
+        },
+      }}
+    >
+      <Container
+        sx={{
+          position: "relative",
+          textAlign: "center",
+          color: "common.white",
+        }}
+      >
+        <Typography
+          variant="h3"
+          component="h1"
+          gutterBottom
+          sx={{ fontWeight: "bold", textShadow: "0px 2px 8px rgba(0,0,0,0.7)" }}
+        >
+          Recycle Made Easy
+        </Typography>
+        <Typography
+          variant="h6"
+          paragraph
+          sx={{ textShadow: "0px 1px 6px rgba(0,0,0,0.6)" }}
+        >
+          Schedule your recycling pickup with just a few clicks.
+        </Typography>
+        <Button
+          variant="contained"
+          size="large"
+          component={Link}
+          to="/auth"
           sx={{ mt: 2 }}
-          required
-        />
+        >
+          Get Started
+        </Button>
+      </Container>
+    </Box>
 
-        {/* Buttons */}
-        <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-          <Button type="submit" variant="contained">
-            Schedule
-          </Button>
-          <Button variant="outlined" onClick={handleUseLocation}>
-            Use Current Location
-          </Button>
-        </Stack>
-      </Box>
-
-      {/* Pickup History */}
-      <Typography variant="h5" gutterBottom>
-        My Pickups
+    <Container sx={{ py: 6 }}>
+      <Typography variant="h4" align="center" gutterBottom>
+        How It Works
       </Typography>
-      <Grid container spacing={2} alignItems="stretch">
-        {pickups.map((p) => (
-          <Grid item xs={12} sm={6} md={4} key={p._id} sx={{ display: "flex" }}>
-            <Card
-              sx={{ display: "flex", flexDirection: "column", width: "100%" }}
-              elevation={3}
-            >
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography>
-                  <strong>Material:</strong> {p.materialType}
+      <Grid container spacing={4}>
+        {features.map((feature) => (
+          <Grid item xs={12} sm={6} md={4} key={feature.title}>
+            <Card elevation={3} sx={{ height: "100%" }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {feature.title}
                 </Typography>
-                <Typography>
-                  <strong>Date:</strong>{" "}
-                  {new Date(p.pickupDate).toLocaleDateString()}
-                </Typography>
-                <Typography>
-                  <strong>Time:</strong> {p.pickupTime}
-                </Typography>
-                <Typography>
-                  <strong>Address:</strong> {p.address}
-                </Typography>
-                <Typography>
-                  <strong>Status:</strong> {p.status}
+                <Typography color="textSecondary">
+                  {feature.description}
                 </Typography>
               </CardContent>
             </Card>
@@ -205,7 +106,7 @@ const Dashboard = () => {
         ))}
       </Grid>
     </Container>
-  );
-};
+  </>
+);
 
-export default Dashboard;
+export default Homepage;
