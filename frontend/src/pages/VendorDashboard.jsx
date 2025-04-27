@@ -1,112 +1,152 @@
-// src/pages/Homepage.jsx
-import React from "react";
+// src/pages/VendorDashboard.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  Box,
   Container,
   Typography,
-  Button,
   Grid,
   Card,
   CardContent,
+  Button,
+  Tabs,
+  Tab,
+  Box,
+  Stack,
+  Pagination,
 } from "@mui/material";
-import { Link } from "react-router-dom";
-import HeroImage from "../assets/hero.jpg";
+import { useSnackbar } from "notistack";
+import axios from "../services/api";
 
-const features = [
-  {
-    title: "Easy Scheduling",
-    description: "Book pickups in seconds with our intuitive form.",
-  },
-  {
-    title: "Reliable Vendors",
-    description: "Trusted local recyclers handle your waste.",
-  },
-  {
-    title: "Real-time Tracking",
-    description: "Monitor your pickup status instantly.",
-  },
-];
+const ITEMS_PER_PAGE = 6;
 
-const Homepage = () => (
-  <>
-    <Box
-      sx={{
-        position: "relative",
-        height: { xs: "40vh", md: "60vh" },
-        backgroundImage: `url(${HeroImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        // blend a dark overlay
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          width: "100%",
-          height: "100%",
-          bgcolor: "rgba(0, 0, 0, 0.4)",
-          top: 0,
-          left: 0,
-        },
-      }}
-    >
-      <Container
-        sx={{
-          position: "relative",
-          textAlign: "center",
-          color: "common.white",
-        }}
-      >
-        <Typography
-          variant="h3"
-          component="h1"
-          gutterBottom
-          sx={{ fontWeight: "bold", textShadow: "0px 2px 8px rgba(0,0,0,0.7)" }}
-        >
-          Recycle Made Easy
-        </Typography>
-        <Typography
-          variant="h6"
-          paragraph
-          sx={{ textShadow: "0px 1px 6px rgba(0,0,0,0.6)" }}
-        >
-          Schedule your recycling pickup with just a few clicks.
-        </Typography>
-        <Button
-          variant="contained"
-          size="large"
-          component={Link}
-          to="/auth"
-          sx={{ mt: 2 }}
-        >
-          Get Started
-        </Button>
-      </Container>
-    </Box>
+const VendorDashboard = () => {
+  const { enqueueSnackbar } = useSnackbar();
+  const [pickups, setPickups] = useState([]);
+  const [filter, setFilter] = useState("All");
+  const [page, setPage] = useState(1);
 
-    <Container sx={{ py: 6 }}>
-      <Typography variant="h4" align="center" gutterBottom>
-        How It Works
+  useEffect(() => {
+    axios
+      .get("/vendor/pickups")
+      .then((res) => setPickups(res.data))
+      .catch(() =>
+        enqueueSnackbar("Failed to load vendor pickups", { variant: "error" })
+      );
+  }, [enqueueSnackbar]);
+
+  // Filter logic
+  const filtered = useMemo(() => {
+    if (filter === "Scheduled")
+      return pickups.filter((p) => p.status === "Scheduled");
+    if (filter === "Completed")
+      return pickups.filter((p) => p.status === "Completed");
+    return pickups;
+  }, [filter, pickups]);
+
+  // Pagination
+  const pageCount = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paged = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [page, filtered]);
+
+  const handleTab = (_, v) => {
+    setFilter(v);
+    setPage(1);
+  };
+  const handlePage = (_, v) => setPage(v);
+
+  const markComplete = (id) => {
+    axios
+      .patch(`/vendor/complete/${id}`)
+      .then(() => {
+        enqueueSnackbar("Pickup marked completed", { variant: "success" });
+        return axios.get("/vendor/pickups");
+      })
+      .then((res) => setPickups(res.data))
+      .catch(() =>
+        enqueueSnackbar("Failed to mark complete", { variant: "error" })
+      );
+  };
+
+  return (
+    <Container sx={{ py: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Vendor Pickups
       </Typography>
-      <Grid container spacing={4}>
-        {features.map((feature) => (
-          <Grid item xs={12} sm={6} md={4} key={feature.title}>
-            <Card elevation={3} sx={{ height: "100%" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {feature.title}
-                </Typography>
-                <Typography color="textSecondary">
-                  {feature.description}
-                </Typography>
+
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs
+          value={filter}
+          onChange={handleTab}
+          textColor="primary"
+          indicatorColor="primary"
+        >
+          <Tab label="All" value="All" />
+          <Tab label="Scheduled" value="Scheduled" />
+          <Tab label="Completed" value="Completed" />
+        </Tabs>
+      </Box>
+
+      <Grid container spacing={3} alignItems="stretch">
+        {paged.map((p) => (
+          <Grid item xs={12} sm={4} md={4} key={p._id} sx={{ display: "flex" }}>
+            <Card
+              elevation={2}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                width: "100%",
+                height: "100%", // ← ensures card fills entire row height
+              }}
+            >
+              <CardContent sx={{ flexGrow: 1 }}>
+                <Stack spacing={1}>
+                  <Typography>
+                    <strong>User Address:</strong> {p.address}
+                  </Typography>
+                  <Typography>
+                    <strong>Material:</strong> {p.materialType}
+                  </Typography>
+                  <Typography>
+                    <strong>Date:</strong>{" "}
+                    {new Date(p.pickupDate).toLocaleDateString()}
+                  </Typography>
+                  <Typography>
+                    <strong>Time:</strong> {p.pickupTime}
+                  </Typography>
+                  <Typography>
+                    <strong>Status:</strong> {p.status}
+                  </Typography>
+                </Stack>
               </CardContent>
+              {p.status === "Scheduled" && (
+                <Box sx={{ p: 2, pt: 0 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={() => markComplete(p._id)}
+                  >
+                    Mark Completed
+                  </Button>
+                </Box>
+              )}
             </Card>
           </Grid>
         ))}
       </Grid>
-    </Container>
-  </>
-);
 
-export default Homepage;
+      {pageCount > 1 && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <Pagination
+            count={pageCount}
+            page={page}
+            onChange={handlePage}
+            color="primary"
+          />
+        </Box>
+      )}
+    </Container>
+  );
+};
+
+export default VendorDashboard;
