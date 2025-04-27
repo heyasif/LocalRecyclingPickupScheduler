@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -20,6 +21,7 @@ function App() {
   return (
     <SnackbarProvider
       maxSnack={3}
+      autoHideDuration={2000} // ← Toasts auto-close after 3 seconds
       anchorOrigin={{ vertical: "top", horizontal: "right" }}
     >
       <Router>
